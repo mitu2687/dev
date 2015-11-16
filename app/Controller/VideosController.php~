@@ -1,0 +1,99 @@
+<?php
+App::uses('AppController', 'Controller');
+App::uses('AppShell','Console/Command');
+App::uses('VideosShell','Console/Command');
+App::import('Vendor','simple_html_dom');
+class VideosController extends AppController{
+
+	public $paginate=array( 'paramType' => 'querystring');
+
+	public function admin_index(){
+		$options=$this->paginate;
+		$options['limit']=30;
+		$options['conditions']=array('Video.delete'=>0);
+		$this->paginate=$options;
+		$data=$this->paginate();
+		$this->set('datas',$data);
+	}
+
+	public function admin_edit($params){
+		$data=$this->Video->findById($params);
+		$this->set('data',$data);
+		$pattern='/[\D]{5,}/';
+		$data['Video']['video']=preg_replace($pattern,'',$data['Video']['video']);
+		$num=strpos($data['Video']['video'],'/');
+		$len=strlen($data['Video']['video']);
+		$sum=$len-$num;
+		$data['Video']['video']=substr($data['Video']['video'],-$len,-$sum);
+		$frame="src=http://flashservice.xvideos.com/embedframe/{$data['Video']['video']} frameborder=0 width=255 height=200 scrolling=no";
+		$embet=$frame;
+		$this->set('embet',$embet);
+		$cate = ClassRegistry::init('Category')->find('all');
+		$this->set('cate',$cate);
+		/*$tag = ClassRegistry::init('Tag')->find('all',array(
+			'conditions'=>array('video_id'=>$params),
+		));
+		$this->set('tag',$tags);*/
+		$tags=ClassRegistry::init('Tag')->find('all',array(
+			'recursive'=>-2,
+		));
+		$this->set('tags',$tags);
+	}
+
+	public function admin_add($params){
+    	$post=$this->request->data;
+	if($this->Video->save($post)){
+			if(!empty($post['Tag']['name'])){
+			$this->loadModel('Tag');
+			$this->Tag->save($post);
+			}elseif(isset($post['VideosTag']['video_id'])){
+			$post['VideosTag']['master_id']=
+				$post['VideosTag']['video_id'];
+			$this->loadModel('VideosTag');
+			$this->VideosTag->save($post);
+			}
+    		$this->Session->setFlash('更新が完了しました');
+    		$this->redirect("/admin/videos/edit/$params");
+    	}else{
+    		$this->Session->setFlash('データ挿入に失敗しました。');
+    	}
+    }
+
+	public function admin_master($params){
+    	$post=$this->request->data;
+		 $this->Video->getImage($params);
+		$this->loadModel('Master');
+		if($this->Master->save($post)){
+    		$this->Session->setFlash('更新が完了しました');
+    		$this->redirect("/admin/videos/edit/$params");
+		}else{
+    		$this->Session->setFlash('データ挿入に失敗しました。');
+		}
+	}
+
+	public function admin_delete($params){
+		$condition=array('Video.id'=>$params);
+		$fields=array('Video.delete'=>1);
+		$this->Video->updateAll($fields,$condition);
+		$this->Session->setFlash('削除しました。');
+		$this->redirect('/admin/videos');
+	}
+
+
+	//コマンドラインスクリプト
+	public function getVideos(){
+
+		for($i=1; $i<=1; $i++){
+			$text=$this->Video->getVideo($i);
+		}
+		return $text;
+
+
+	}
+	
+	
+	
+
+
+
+}

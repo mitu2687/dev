@@ -1,0 +1,75 @@
+<?php
+class UsersController extends AppController {
+	public function beforeFilter(){
+		$this->Auth->allow('login','add');
+	}
+	public function index(){
+
+	}
+	public function login(){
+		if ($this->request->is('post')) {
+			if($this->Auth->login()) {
+				//ログイン後のURLが不安定なため、普通に書く。
+				$this->redirect(array(
+					'controller'=>$this->Auth->loginRedirect['controller'], 
+					'action'=>$this->Auth->loginRedirect['action'])
+				);
+			}else{
+				$this->Session->setFlash(__('user or pass が正しくありません!'), 'default', array(), 'auth');
+			}
+		}
+	}
+	public function logout(){
+		$this->redirect($this->Auth->logout());
+	}
+	public function add() {
+		if ($this->request->is('post')) {
+
+			//created_date の追加
+			$this->request->data['User']['created_date'] = date('Y-m-d H:i:s');
+
+			$this->User->create();
+			if ($this->User->save($this->request->data)) {
+				$this->Session->setFlash(__('The user has been saved'));
+				$this->redirect(array('action' => 'login'));
+			} else {
+				$this->Session->setFlash(__('The user could not be saved. Please, try again.'));
+			}
+		}
+	}
+
+
+
+	public function admin_index(){
+	}
+	public function admin_login(){
+		parent::beforeFilter();
+		$this->login(); //すでに作成したUser用のlogin()を使いまわす。
+	}
+	public function admin_logout(){
+		$this->logout(); //すでに作成したUser用のlogout()を使いまわす。
+	}
+
+
+	public function admin_add() {
+		parent::beforeFilter();
+		if ($this->request->is('post')) {
+
+			//created_date の追加
+			$this->request->data['Owner']['created_date'] = date('Y-m-d H:i:s');
+
+			$this->Owner->create();
+			$this->request->data['Owner']=array(
+				'username'=>$this->request->data['User']['username'],
+				'password'=>$this->request->data['User']['password'],
+			);
+			if ($this->Owner->save($this->request->data)) {
+				$this->Session->setFlash(__('The user has been saved'));
+				$this->redirect(array('action' => 'login'));
+			} else {
+				$this->Session->setFlash(__('The user could not be saved. Please, try again.'));
+			}
+		}
+	}
+
+}
